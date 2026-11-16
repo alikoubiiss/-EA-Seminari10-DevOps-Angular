@@ -1,30 +1,68 @@
-# BackOWIAffice — Autores y libros
+# Backoffice — Autores, libros y chat
 
-Backoffice hecho con Angular 21 (TypeScript, RxJS y Vitest para los tests) para el Seminario 6 de EA.
-Es el frontend de la API REST del Seminario 5 con alguna pequeña modificación
-([EA-Seminari6-Angular-Backoffice-API](https://github.com/ruben-esc/EA-Seminari6-Angular-BackOffice-API)): desde aquí se pueden listar, buscar, crear, editar y borrar autores y libros.
+Backoffice en Angular para gestionar **autores** y **libros**: desde aquí se pueden listar, buscar,
+crear, editar y borrar. Para entrar hay que iniciar sesión, y el backoffice es solo para
+administradores. Es el frontend del Seminario 7 de EA:
 
-La explicación de cómo funciona por dentro (componentes, servicios, signals, routing, formularios...)
-está en [GUIA.md](GUIA.md).
+> Backend/Frontend: JWT, WebSockets. Backend TS + Express. Frontend Angular.
 
-## Requisitos
+Lo que cubre este frontend:
 
-- [Node.js](https://nodejs.org/) 22.12 o superior (el backend del S5 recomienda Node 24 LTS).
-- [MongoDB](https://www.mongodb.com/), local o en Atlas, para el backend.
-- El backend del Seminario 5 arrancado (ver abajo).
-- Recomendado: VS Code con la extensión *Angular Language Service* y [Angular DevTools](https://angular.dev/tools/devtools) en el navegador.
+- Consumir una API REST (CRUD), con formularios reactivos, validación y routing
+- Registro y login, con el token JWT guardado, un interceptor que lo envía y guards en las rutas
+- Listados paginados por el servidor
+- Extra: chat en tiempo real con socket.io (general, de grupo y directo)
+
+Consume la API de [EA-Seminari7-JWT-WebSockets-Backend](https://github.com/Dsoledispa/EA-Seminari7-JWT-WebSockets-Backend).
+
+Cómo funciona por dentro (componentes, servicios, signals, routing, formularios...): [GUIA.md](GUIA.md).
+Las tareas y la bitácora del seminario: [LOGS.md](LOGS.md). Cómo trabajamos (ramas, commits, pull
+requests): [CONTRIBUTING.md](CONTRIBUTING.md).
+
+Además de la aplicación, el repositorio trae lo necesario para empaquetarla y desplegarla: un
+`Dockerfile` de dos etapas, un `docker-compose.yml`, la plantilla `env.example` y un workflow que
+buildea y publica la imagen en cada push. Está explicado al final, en
+[Docker, entornos e imagen publicada](#docker-entornos-e-imagen-publicada).
+
+## Stack tecnológico
+
+Lo que ya está instalado y funcionando:
+
+| Tecnología | Versión | Para qué se usa |
+|---|---|---|
+| [Angular](https://angular.dev/) | 21.2 | Framework del frontend: componentes, router, formularios y cliente HTTP, todo oficial |
+| [TypeScript](https://www.typescriptlang.org/) | 5.9 | JavaScript con tipos. Angular fija qué versiones admite, por eso no va en la 6.0 como el backend |
+| [RxJS](https://rxjs.dev/) | 7.8 | Observables: lo que devuelve `HttpClient` y a lo que se hace `subscribe` |
+| [Angular CLI](https://angular.dev/tools/cli) | 21.2 | El comando `ng`: servidor de desarrollo, build, tests, lint y generar componentes |
+| [Vitest](https://vitest.dev/) | 4.1 | Ejecuta los tests (`*.spec.ts`). Es el runner por defecto de Angular desde que Karma quedó obsoleto |
+| [jsdom](https://github.com/jsdom/jsdom) | 28.1 | Simula el navegador dentro de Node para que los tests puedan pintar componentes |
+| [ESLint](https://eslint.org/) + [angular-eslint](https://github.com/angular-eslint/angular-eslint) | 10.12 / 21.4 | Linter: analiza el TypeScript y también las plantillas HTML, con reglas propias de Angular y de accesibilidad |
+| [Prettier](https://prettier.io/) | 3.9 | Da formato al código (reglas en `.prettierrc`, con el parser de Angular para los `.html`) |
+| [socket.io-client](https://socket.io/docs/v4/client-api/) | 4.8 | Cliente de WebSockets del chat, encapsulado en `ChatService` |
+
+El token JWT no necesita librería: el interceptor y el guard se hacen con lo que ya trae Angular.
+
+## Requisitos previos
+
+- [Node.js](https://nodejs.org/) 24 LTS (mínimo 22.12, que es lo que exige Angular 21). Incluye
+  [npm](https://www.npmjs.com/).
+- El backend del Seminario 7 arrancado, con su MongoDB (ver abajo).
+- [VS Code](https://code.visualstudio.com/) con la extensión *Angular Language Service* (recomendado) y
+  [Angular DevTools](https://angular.dev/tools/devtools) en el navegador.
+
+Angular CLI no hace falta instalarlo aparte: viene con las dependencias del proyecto (`npx ng ...`).
 
 ## Cómo arrancarlo
 
 Hacen falta dos terminales: una para la API y otra para Angular.
 
-**1. Backend (Seminario 5)**
+**1. Backend**
 
 Con MongoDB ya arrancado (o con la URL de Atlas puesta en el `.env`):
 
 ```
-git clone https://github.com/ruben-esc/EA-Seminari6-Angular-BackOffice-API.git
-cd EA-Seminari6-Angular-BackOffice-API
+git clone https://github.com/Dsoledispa/EA-Seminari7-JWT-WebSockets-Backend
+cd EA-Seminari7-JWT-WebSockets-Backend
 npm install
 cp .env.example .env
 npm run seed
@@ -32,88 +70,290 @@ npm run dev
 ```
 
 La API queda en http://localhost:1337 y su documentación (Swagger) en http://localhost:1337/api-docs.
-`npm run seed` mete 5 autores y 12 libros de ejemplo; con `npm run seed -- --reset` se vuelven a poner
-desde cero. Todos los autores de ejemplo tienen la contraseña `seminari5`.
+`npm run seed` mete 2 usuarios, 12 autores y 12 libros de ejemplo; con `npm run seed -- --reset` se
+vuelven a poner desde cero. Si tu base de datos es de antes del Seminario 7, ejecuta una de las dos
+cosas: `npm run migrate-authors` o `npm run seed -- --reset` (lo explica el README del backend).
+Si ya tenías un `.env`, copia en él las variables `JWT_...` de `.env.example`.
 
 **2. Frontend (este repo)**
 
 ```
-git clone https://github.com/mbakkali28/EA-Seminari6-Angular-BackOffice
-cd EA-Seminari6-Angular-BackOffice
+git clone https://github.com/alikoubiiss/DEVOP
+cd DEVOP
 npm install
 npm start
 ```
 
-Y se abre http://localhost:4200.
+Y se abre http://localhost:4200. La página se recarga sola cada vez que guardas un archivo.
+`npm install` ejecuta también `prepare`, que deja instalados los hooks de git de `.husky` (el de
+`pre-push` pasa los tests antes de subir nada).
 
-## Configuración: un solo fichero
+**3. Iniciar sesión** con uno de los usuarios del seed (las contraseñas son públicas a propósito):
 
-Solo hay **un** fichero de configuración. Para cambiar la dirección de la API se toca aquí y en ningún
-sitio más:
+| Email | Contraseña | Qué ve |
+|---|---|---|
+| `admin@example.com` | `seminari7` | El backoffice entero: autores y libros |
+| `user@example.com` | `seminari7` | Solo la página de inicio: el backoffice es para administradores |
+
+También se puede crear una cuenta en "Registrarse". Las cuentas nuevas son siempre de rol `user`.
+
+## Configuración: un fichero por entorno
+
+El frontend no usa `.env`: lo que llega al navegador lo puede leer cualquiera, así que aquí no hay
+secretos. La configuración son dos ficheros con la misma forma, y según cómo se compile entra uno u
+otro:
+
+| Entorno | Fichero | Cuándo se usa |
+|---|---|---|
+| Local | `src/environments/environment.ts` | `npm start` y cualquier build sin `--configuration production` |
+| Producción | `src/environments/environment.prod.ts` | `npm run build` (configuración por defecto) y la imagen Docker |
 
 ```typescript
 // src/environments/environment.ts
 export const environment = {
-  apiUrl: 'http://localhost:1337'
+  // URL usada por las llamadas HTTP.
+  apiUrl: 'http://localhost:1337',
+
+  // URL base usada para conectar con Socket.IO.
+  socketUrl: 'http://localhost:1337',
 };
 ```
+
+Las dos son iguales porque el backend sirve la API y el chat en el mismo puerto. El reemplazo está
+declarado en `angular.json` (`fileReplacements` de la configuración `production`), así que el código
+nunca cambia de import: los servicios leen siempre `environment`.
 
 ## Scripts
 
 | Comando | Qué hace |
 |---|---|
 | `npm start` | Servidor de desarrollo en http://localhost:4200. Se recarga solo al guardar |
-| `npm test` | Pasa los tests con Vitest y se queda esperando cambios (`npm test -- --watch=false` para pasarlos una vez) |
+| `npm test` | Pasa los tests con Vitest y se queda esperando cambios (`npm test -- --no-watch` para pasarlos una vez) |
+| `npm run lint` | Pasa angular-eslint sobre los `.ts` y los `.html` de `src/` |
 | `npm run build` | Compila la versión de producción en `dist/backoffice/browser` |
 | `npx ng generate component components/<nombre>` | Crea un componente nuevo con el CLI del proyecto |
 
 ## Pantallas
 
-| Ruta | Pantalla |
-|---|---|
-| `/authors` | Lista de autores (en tabla o en tarjetas): buscador, paginación, editar y borrar |
-| `/authors/new` | Nuevo autor |
-| `/authors/:id/edit` | Editar autor |
-| `/books` | Lista de libros (en tabla o en tarjetas): buscador, paginación, editar y borrar |
-| `/books/new` | Nuevo libro |
-| `/books/:id/edit` | Editar libro |
+| Ruta | Pantalla | Quién entra |
+|---|---|---|
+| `/login` | Iniciar sesión | Solo sin sesión |
+| `/register` | Crear una cuenta | Solo sin sesión |
+| `/` | Inicio: saludo, rol, acceso al chat y al backoffice si es admin | Con sesión |
+| `/chat` | Chat en tiempo real: general, de grupo y directo | Con sesión |
+| `/authors` | Lista de autores (en tabla o en tarjetas): buscador, paginación, editar y borrar | Admin |
+| `/authors/new` | Nuevo autor | Admin |
+| `/authors/:id/edit` | Editar autor | Admin |
+| `/books` | Lista de libros (en tabla o en tarjetas): buscador, paginación, editar y borrar | Admin |
+| `/books/new` | Nuevo libro | Admin |
+| `/books/:id/edit` | Editar libro | Admin |
+
+Si se entra en una ruta sin permiso, el guard lleva al login (sin sesión) o al inicio (un `user` que
+intenta entrar en el backoffice).
 
 ## Estructura del proyecto
 
 ```
-src/app/
-├── components/
-│   ├── navbar/            # menú de arriba
-│   ├── authors-list/      # lista de autores
-│   ├── author-form/       # crear y editar autores
-│   ├── books-list/        # lista de libros
-│   ├── book-form/         # crear y editar libros
-│   ├── pagination/        # paginación, componente hijo de las dos listas
-│   ├── confirm-modal/     # ventana para confirmar antes de borrar
-│   └── view-toggle/       # botones para ver las listas en tabla o en tarjetas
-├── models/
-│   ├── author.model.ts    # Author, CreateAuthor, UpdateAuthor
-│   ├── book.model.ts      # Book, BookInput, CreateBook, UpdateBook, BOOK_LANGUAGES, BOOK_TAGS
-│   └── index.ts
-├── services/
-│   ├── author.service.ts  # getAuthors, getAuthor, createAuthor, updateAuthor, deleteAuthor
-│   └── book.service.ts    # getBooks, getBook, createBook, updateBook, deleteBook
-├── pipes/
-│   └── language-name-pipe.ts   # 'es' -> 'Castellano'
-├── utils/
-│   ├── api-error.ts       # pasa un error de HttpClient a un texto para la pantalla
-│   └── remove-empty.ts    # quita los campos vacíos antes de enviar un formulario
-├── app.routes.ts          # rutas
-└── app.config.ts          # router y HttpClient
+src/
+  main.ts                  Punto de entrada: arranca Angular sobre <app-root> de index.html
+  environments/
+    environment.ts         Configuración de local: la URL de la API y del chat
+    environment.prod.ts    La misma configuración, pero de producción
+  app/
+    app.config.ts          Providers de toda la app: router y HttpClient (con el interceptor)
+    app.routes.ts          El mapa de rutas: qué URL pinta qué componente
+    app.ts, app.html       Componente raíz: la barra de navegación y el <router-outlet>
+    components/
+      navbar/              Menú de arriba: enlaces según el rol, usuario con sesión y cerrar sesión
+      login/               Iniciar sesión
+      register/            Crear una cuenta
+      home/                Página de inicio para cualquier usuario con sesión
+      chat/                Chat: pestañas general, grupo y directo, mensajes y estado de la conexión
+      authors-list/        Lista de autores
+      author-card/         Tarjeta de un autor (componente hijo de la lista)
+      author-form/         Crear y editar autores
+      books-list/          Lista de libros
+      book-form/           Crear y editar libros
+      pagination/          Paginación, componente hijo de las dos listas
+      confirm-modal/       Ventana para confirmar antes de borrar
+      view-toggle/         Botones para ver las listas en tabla o en tarjetas
+    models/                Interfaces TypeScript con la forma de los datos de la API
+      author.model.ts        Author, CreateAuthor, UpdateAuthor
+      book.model.ts          Book, BookInput, CreateBook, UpdateBook, BOOK_LANGUAGES, BOOK_TAGS
+      user.model.ts          User, UserRole y las peticiones y respuestas de /auth
+    services/              Las únicas piezas que hablan con la API (HttpClient)
+      auth.service.ts        register, login, refresh, logout y el usuario con sesión (signal)
+      author.service.ts      getAuthors, getAuthor, createAuthor, updateAuthor, deleteAuthor
+      book.service.ts        getBooks, getBook, createBook, updateBook, deleteBook
+      chat.service.ts        El socket del chat: connect, joinRoom, sendMessage y los eventos como Observables
+    pipes/                 Formatean datos en la plantilla
+      language-name-pipe.ts  'es' -> 'Castellano'
+      truncate-pipe.ts       Corta textos largos con "..."
+    interceptors/
+      auth.interceptor.ts  Añade el token a cada petición y lo renueva si ha caducado
+    guards/
+      auth.guard.ts        authGuard, adminGuard y guestGuard: quién puede entrar en cada ruta
+    utils/
+      api-error.ts         Pasa un error de HttpClient a un texto para la pantalla
+      remove-empty.ts      Quita los campos vacíos antes de enviar un formulario
+      password-match.ts    Validador: la contraseña y su repetición coinciden
 ```
+
+Un dato viaja siempre por el mismo camino, igual que en el backend cada capa hace una sola cosa:
+
+```
+componente -> service (HttpClient) -> API -> respuesta -> subscribe -> signal -> la plantilla se repinta
+```
+
+Los componentes no saben de URLs ni de HTTP: piden los datos al service y guardan el resultado en una
+signal. Tampoco saben del token: lo añade el interceptor a todas las peticiones.
+
+## Autenticación
+
+Cómo funciona por dentro (interceptor, guards, renovación del token) está en el
+[apartado 13 de la GUIA](GUIA.md#13-autenticación-interceptor-y-guards). En resumen:
+
+1. En el login, la API devuelve `{ token, refreshToken, user }` y `AuthService` lo guarda todo.
+2. `authInterceptor` añade `Authorization: Bearer <token>` a cada petición.
+3. El access token caduca a los 15 minutos. Cuando la API responde 401 con "El token ha caducado", el
+   interceptor pide uno nuevo a `POST /auth/refresh` y repite la petición, sin que el usuario lo note.
+   Si el refresh token también ha caducado (a los 7 días), cierra la sesión y lleva al login.
+4. Los guards deciden qué pantallas se pueden abrir según haya sesión y según el rol.
+
+### Dónde se guardan los tokens: localStorage o cookie HttpOnly
+
+Los guardamos en **localStorage** (con las claves `token`, `refreshToken` y `user`). Las dos opciones
+que se suelen comparar:
+
+| | localStorage | Cookie HttpOnly |
+|---|---|---|
+| Quién la guarda | El frontend, con JavaScript | El backend, con la cabecera `Set-Cookie` |
+| Se puede leer desde JavaScript | Sí | No |
+| Riesgo principal | **XSS**: si alguien consigue ejecutar un script en la página, puede leer el token y usarlo desde otro sitio | **CSRF**: el navegador envía la cookie solo, también en peticiones que provoca otra web; hay que protegerse (`SameSite`, token anti-CSRF) |
+| Qué pide | Nada especial: encaja con una API que devuelve el token en el JSON | Cambiar el backend (enviar y leer cookies) y configurar CORS con `credentials` |
+
+Elegimos localStorage porque es lo que encaja con el contrato de la API (el token llega en el JSON del
+login) y se entiende sin piezas extra. El riesgo de XSS se reduce porque Angular escapa todo lo que se
+pinta en las plantillas (`{{ }}` nunca ejecuta HTML), y porque el access token dura poco. En una
+aplicación real con datos sensibles, la cookie HttpOnly es la opción más segura.
+
+Los guards y el ocultar botones son solo comodidad: quien protege los datos es el backend, que
+comprueba el token y el rol en cada petición. Desde las herramientas del navegador se puede saltar un
+guard, pero la API seguiría respondiendo 401 o 403.
+
+## Chat
+
+El chat no usa HTTP sino un WebSocket con [socket.io](https://socket.io/): una conexión que se queda
+abierta para que el servidor pueda avisar en cuanto alguien escribe. Cómo está hecho por dentro
+(servicio, Observables, recorrido de un mensaje) está en el
+[apartado 14 de la GUIA](GUIA.md#14-chat-con-websockets); los eventos y los nombres de las salas, en
+el Contrato de [LOGS.md](LOGS.md).
+
+- **General**: la sala de todos.
+- **Grupo**: se escribe un nombre (por ejemplo `seminario-7`) y entra quien escriba el mismo.
+- **Directo**: se elige otro usuario de la lista. Solo pueden leerlo y escribir en él esos dos usuarios.
+
+Arriba, la franja **Usuarios** dice quién tiene el chat abierto ahora mismo (punto verde) y quién no
+(gris). Pulsar un usuario abre el chat directo con él.
+
+Al entrar en una sala llegan los últimos 50 mensajes. Para probarlo hacen falta dos sesiones a la vez,
+por ejemplo una ventana normal con `admin@example.com` y una de incógnito con `user@example.com`.
 
 ## Cosas de la API que hay que saber
 
-- Editar es un PUT y la API pide siempre los campos obligatorios. En los autores eso incluye la
-  contraseña: al editar hay que escribirla otra vez y se guarda la que se escriba.
+- Editar es un PUT y la API pide siempre los campos obligatorios (en los autores, el nombre y el
+  email). Un autor no tiene contraseña ni rol: quien inicia sesión es un usuario.
 - Un campo opcional que se deja vacío al editar no se borra. La API rechaza los valores vacíos, así
   que el formulario no los envía y la API deja el valor que tenía. Los tags sí se pueden vaciar: si se
   desmarcan todos se envía una lista vacía.
-- Borrar un autor no borra sus libros: se quedan sin ese autor (si era el único, en la lista sale
-  "Sin autores").
+- Borrar es un borrado lógico: la API marca el autor o el libro como borrado y deja de devolverlo, pero
+  sigue en la base de datos. Por eso un autor borrado **sigue apareciendo dentro de sus libros**.
 - Los mensajes de error de validación que devuelve la API (422) vienen en inglés, de Joi.
+
+## Docker, entornos e imagen publicada
+
+La app se empaqueta en una imagen con `Dockerfile` y se sirve con nginx. La imagen son dos etapas:
+`node:24-alpine` instala y compila (`npx ng build --configuration "${APP_ENV}"`) y
+`nginx:1.29-alpine` sirve solo el estático con `nginx.conf` (todas las rutas de la SPA al `index.html`
+y cache larga para los ficheros con hash). El resultado del build va a `dist/backoffice/browser`, que
+es justo lo que la imagen copia.
+
+### Los dos entornos
+
+Hay un fichero de configuración por entorno y **solo se toca el que corresponda**:
+
+| Entorno | Fichero | Cómo se compila |
+|---|---|---|
+| Local | `src/environments/environment.ts` | `npm start`, o `--configuration local` / `APP_ENV=local` |
+| Producción | `src/environments/environment.prod.ts` | `npm run build`, o `APP_ENV=production` (el valor por defecto) |
+
+El reemplazo lo declara `angular.json`: la configuración `production` tiene un `fileReplacements` que
+cambia `src/environments/environment.ts` por `src/environments/environment.prod.ts`, y la
+configuración `local` compila el `environment.ts` de siempre. No hay que cambiar ningún import.
+
+**En producción solo se edita `src/environments/environment.prod.ts`** (`apiUrl` y `socketUrl`): se
+cambia la IP o el dominio, se commitea y el workflow reconstruye y publica la imagen en ese push. Las
+dos URLs las resuelve el navegador, no el contenedor, así que tienen que ser alcanzables desde el
+equipo donde se abre la app.
+
+En Docker esa elección es el build arg `APP_ENV`, que es lo único que cambia entre las dos imágenes.
+
+### Con docker compose
+
+`docker-compose.yml` construye la imagen con el `APP_ENV` que se le pase y publica el contenedor. Los
+valores salen de variables de entorno, con un valor por defecto escrito en el propio compose, así que
+arranca sin configurar nada. La plantilla versionada es `env.example`: se copia a un fichero de
+entorno local (Docker Compose lo lee solo) y se cambian los valores que hagan falta:
+
+```
+cp env.example .env
+docker compose up --build -d
+```
+
+| Variable | Por defecto | Qué controla |
+|---|---|---|
+| `APP_ENV` | `production` | Qué configuración de Angular se compila: `production` (`environment.prod.ts`) o `local` (`environment.ts`) |
+| `BACKOFFICE_PORT` | `4200` | Puerto del host publicado (el contenedor siempre escucha en el 80) |
+| `BACKOFFICE_IMAGE` | `backoffice:latest` | Etiqueta de la imagen que construye el compose |
+| `NETWORK_NAME` | `devop-net` | Red bridge compartida por los contenedores |
+
+Como las URLs las resuelve el navegador, tienen que ser accesibles desde tu máquina, no desde la red
+de contenedores. El servicio se cuelga de esa red para que otros contenedores (por ejemplo el backend)
+puedan unirse a ella y resolverlo por nombre desde su propio `docker-compose.yml`:
+
+```yaml
+networks:
+  devop-net:
+    external: true
+```
+
+### Con docker build y docker run
+
+```
+docker build -t backoffice:latest .                                # APP_ENV=production
+docker run --rm -p 4200:80 backoffice:latest                       # http://localhost:4200
+
+docker build --build-arg APP_ENV=local -t backoffice:local .       # apuntando a local
+docker run --rm -p 4200:80 backoffice:local
+```
+
+### Imagen publicada
+
+`.github/workflows/ci.yml` corre en los push a `main`, en los tags `v*` y en los pull request hacia
+`main`:
+
+1. `npm ci`, `npm run lint`, `npm test -- --no-watch` y `npm run build`.
+2. Si esos pasos van bien, buildea la imagen.
+
+En un **push** la imagen se publica en GitHub Container Registry como
+`ghcr.io/alikoubiiss/devop` (el workflow lo saca del repositorio y lo pasa a minúsculas), con la
+etiqueta `latest`.
+
+En un **pull request** se buildea la imagen igual, pero no se publica nada: sirve para detectar un
+`Dockerfile` roto antes de mezclar. La autenticación en el registro usa el `GITHUB_TOKEN` del propio
+workflow (`packages: write`), sin secretos extra.
+
+## Cómo contribuir
+
+Ramas, commits y pull requests en [CONTRIBUTING.md](CONTRIBUTING.md). Tareas pendientes y bitácora en
+[LOGS.md](LOGS.md).

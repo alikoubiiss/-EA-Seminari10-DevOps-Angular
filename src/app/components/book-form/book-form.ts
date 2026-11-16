@@ -40,7 +40,6 @@ export class BookForm implements OnInit {
     isbn: ['', [Validators.required, Validators.pattern(/\S/)]],
     authors: [[] as string[], Validators.required],
     description:[``],
-    publisher: [''],
     publishedYear: this.fb.control<number | null>(null, [
       Validators.min(1450),
       Validators.max(2100),
@@ -53,7 +52,7 @@ export class BookForm implements OnInit {
 
   ngOnInit(): void {
     // Los autores hacen falta siempre, son las opciones para elegir los autores del libro
-    this.authorService.getAuthors().subscribe({
+    this.authorService.getAuthors(1, 100).subscribe({
       next: (response) => this.authors.set(response.authors),
       error: (err: HttpErrorResponse) => this.error.set(apiErrorMessage(err)),
     });
@@ -105,7 +104,6 @@ export class BookForm implements OnInit {
       // La API manda los autores enteros (populate), pero el select trabaja con sus ids
       authors: book.authors.map((author) => author._id),
       description:book.description ?? ``,
-      publisher: book.publisher ?? '',
       publishedYear: book.publishedYear ?? null,
       pages: book.pages ?? null,
       language: book.language ?? 'es',
