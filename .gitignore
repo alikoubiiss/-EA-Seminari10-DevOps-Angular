@@ -44,7 +44,13 @@ __screenshots__/
 !README.md
 !GUIA.md
 !EJERCICIO.md
+!CONTRIBUTING.md
+!LOGS.md
 *.py
+
+# Local environment values for docker compose
+/.env
+/.env.local
 
 # System files
 .DS_Store

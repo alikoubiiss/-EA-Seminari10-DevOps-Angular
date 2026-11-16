@@ -1,12 +1,21 @@
+name: devop
+
 services:
   backoffice:
     build:
       context: .
       dockerfile: Dockerfile
       args:
-        API_URL: http://localhost:1337
-    image: backoffice:latest
+        APP_ENV: ${APP_ENV:-production}
+    image: ${BACKOFFICE_IMAGE:-backoffice:latest}
     container_name: backoffice
     ports:
-      - "4200:80"
+      - "${BACKOFFICE_PORT:-4200}:80"
     restart: unless-stopped
+    networks:
+      - devop-net
+
+networks:
+  devop-net:
+    name: ${NETWORK_NAME:-devop-net}
+    driver: bridge
