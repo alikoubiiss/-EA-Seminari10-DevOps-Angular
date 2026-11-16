@@ -20,7 +20,7 @@ Las tareas y la bitácora del seminario: [LOGS.md](LOGS.md). Cómo trabajamos (r
 requests): [CONTRIBUTING.md](CONTRIBUTING.md).
 
 Además de la aplicación, el repositorio trae lo necesario para empaquetarla y desplegarla: un
-`Dockerfile` de dos etapas, un `docker-compose.yml`, la plantilla `env.example` y un workflow que
+`Dockerfile` de dos etapas, la plantilla `env.example` y un workflow que
 buildea y publica la imagen en cada push. Está explicado al final, en
 [Docker, entornos e imagen publicada](#docker-entornos-e-imagen-publicada).
 
@@ -274,8 +274,9 @@ por ejemplo una ventana normal con `admin@example.com` y una de incógnito con `
 
 La app se empaqueta en una imagen con `Dockerfile` y se sirve con nginx. La imagen son dos etapas:
 `node:24-alpine` instala y compila (`npx ng build --configuration "${APP_ENV}"`) y
-`nginx:1.29-alpine` sirve solo el estático con `nginx.conf` (todas las rutas de la SPA al `index.html`
-y cache larga para los ficheros con hash). El resultado del build va a `dist/backoffice/browser`, que
+`nginx:1.29-alpine` sirve solo el estático con su configuracion por defecto, sin `nginx.conf` propio:
+solo se llega a las rutas internas de la SPA navegando desde `/`, porque al recargar una ruta profunda
+el servidor devuelve 404. El resultado del build va a `dist/backoffice/browser`, que
 es justo lo que la imagen copia.
 
 ### Los dos entornos
@@ -298,36 +299,10 @@ equipo donde se abre la app.
 
 En Docker esa elección es el build arg `APP_ENV`, que es lo único que cambia entre las dos imágenes.
 
-### Con docker compose
-
-`docker-compose.yml` construye la imagen con el `APP_ENV` que se le pase y publica el contenedor. Los
-valores salen de variables de entorno, con un valor por defecto escrito en el propio compose, así que
-arranca sin configurar nada. La plantilla versionada es `env.example`: se copia a un fichero de
-entorno local (Docker Compose lo lee solo) y se cambian los valores que hagan falta:
-
-```
-cp env.example .env
-docker compose up --build -d
-```
-
-| Variable | Por defecto | Qué controla |
-|---|---|---|
-| `APP_ENV` | `production` | Qué configuración de Angular se compila: `production` (`environment.prod.ts`) o `local` (`environment.ts`) |
-| `BACKOFFICE_PORT` | `4200` | Puerto del host publicado (el contenedor siempre escucha en el 80) |
-| `BACKOFFICE_IMAGE` | `backoffice:latest` | Etiqueta de la imagen que construye el compose |
-| `NETWORK_NAME` | `devop-net` | Red bridge compartida por los contenedores |
-
-Como las URLs las resuelve el navegador, tienen que ser accesibles desde tu máquina, no desde la red
-de contenedores. El servicio se cuelga de esa red para que otros contenedores (por ejemplo el backend)
-puedan unirse a ella y resolverlo por nombre desde su propio `docker-compose.yml`:
-
-```yaml
-networks:
-  devop-net:
-    external: true
-```
-
 ### Con docker build y docker run
+
+El `docker-compose.yml` no vive acá: la orquestación de MongoDB, la API y los dos backoffices está en
+el repo `EA-Seminari10-DevOps`. Aquí solo se construye y se publica esta imagen.
 
 ```
 docker build -t backoffice:latest .                                # APP_ENV=production

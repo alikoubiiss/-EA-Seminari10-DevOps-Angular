@@ -48,7 +48,7 @@ __screenshots__/
 !LOGS.md
 *.py
 
-# Local environment values for docker compose
+# Local environment values (git-ignored)
 /.env
 /.env.local
 
